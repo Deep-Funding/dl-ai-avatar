@@ -1,3 +1,0 @@
-This is in an early development stage. Originally the idea was to have a third staff member next to **Jan** and **Raphael**. However, some community members rose to the occasion and requested to build this up grass-roots way. We have now a defacto ‘**Developer Outreach Circle**’ that is working on some experiments around Hackathons. There may also turn out to be some overlap with the ‘**Events Circle**’ that is in charge of (regional, central) Town halls and similar events. The aim is to make town halls more targeted at onboarding new proposers and awarded teams. 
-
-We may still conclude that a full-time coordinator role is desired for this, but for now, that role has been postponed. 

@@ -1,3 +1,0 @@
-# 💳 __Wallet Creation for Recieving Payments__
-
-This guide provides a step-by-step process for setting up some of the most popular Cardano wallets that support our $AGIX payments. While we are informing about the existence of these wallets as options for receiving the rewards from Deep Funding, we require you to make your own research when selecting the wallet from a larger pool of options that exists in the industry. Additionally, please note that we are not affiliated with them in any official capacity.
