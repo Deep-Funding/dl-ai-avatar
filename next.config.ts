@@ -1,7 +1,6 @@
-import type {NextConfig} from 'next';
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -24,10 +23,11 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  serverActions: {
-    // Increase timeout for AI actions
-    bodySizeLimit: '4.5mb',
-  }
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '4.5mb', // Moved under experimental
+    },
+  },
 };
 
 export default nextConfig;
