@@ -21,9 +21,9 @@
     "baseUrl": "src",
     "paths": {
       "@/*": ["./*"]
-    }
+    },
+    "types": ["@types/node", "@types/cheerio"] // Add "node", remove "@types/prop-types" unless needed
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"],
-  "types": ["@types/cheerio"]
+  "exclude": ["node_modules"]
 }
