@@ -3,12 +3,19 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Update npm to avoid version warning
+RUN npm install -g npm@11.6.0
+
 # Install dependencies only when needed
 COPY package.json package-lock.json* ./
 RUN npm ci --omit=dev
 
 # Copy all files
 COPY . .
+
+# Accept GEMINI_API_KEY as a build arg
+ARG GEMINI_API_KEY
+ENV GEMINI_API_KEY=$GEMINI_API_KEY
 
 # Build Next.js app
 RUN npm run build
