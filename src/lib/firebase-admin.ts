@@ -46,7 +46,7 @@
 
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import serviceAccount from process.env.serviceAccount assert { type: 'json' };
+const serviceAccount = process.env.serviceAccount assert { type: 'json' };
 //import serviceAccount from '../service-account.json' assert { type: 'json' };
 
 let db: ReturnType<typeof getFirestore> | null = null;
