@@ -66,8 +66,8 @@ const ChatInterface = ({
             <AvatarFallback>DF</AvatarFallback>
           </Avatar>
           <div>
-            <div className="text-lg font-semibold">DeepFunding AI</div>
-            <p className="text-sm text-muted-foreground">Your guide to DeepFunding</p>
+            <div className="text-lg font-semibold">Deep AI Avatar</div>
+            <p className="text-sm text-muted-foreground">Your guide to Deep</p>
           </div>
         </div>
         <div className="flex items-center space-x-2">
