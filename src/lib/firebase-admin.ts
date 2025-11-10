@@ -46,20 +46,28 @@
 
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import serviceAccount from '../service-account.json' assert { type: 'json' };
 
 let db: ReturnType<typeof getFirestore> | null = null;
 
 export function getDb() {
   if (!getApps().length) {
+    const projectId = process.env.GOOGLE_PROJECT_ID;
+    const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
+    const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+
+    if (!projectId || !clientEmail || !privateKey) {
+      throw new Error('Missing Firebase environment variables');
+    }
+
     initializeApp({
       credential: cert({
-        projectId: serviceAccount.project_id,
-        clientEmail: serviceAccount.client_email,
-        privateKey: serviceAccount.private_key.replace(/\\n/g, '\n'),
+        projectId,
+        clientEmail,
+        privateKey,
       }),
     });
-    console.log('✅ Firebase Admin SDK initialized');
+
+    console.log('✅ Firebase Admin SDK initialized with env vars');
   }
 
   if (!db) {
