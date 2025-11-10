@@ -8,6 +8,9 @@ const orbitron = Orbitron({ subsets: ['latin'], variable: '--font-sans' });
 export const metadata: Metadata = {
   title: 'DeepFunding AI',
   description: 'AI-powered knowledge assistant for DeepFunding.',
+  icons: {
+    icon: '/logo.png',
+  }
 };
 
 export default function RootLayout({

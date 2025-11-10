@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { Bot, Maximize, Minimize, User, X } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -12,7 +13,6 @@ import {
   CardHeader,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { askDeepFunding } from '@/ai/flows/ask-deepfunding-flow';
 import { LinkedText } from '@/components/linked-text';
 
 const ChatBubble = ({ onClick }: { onClick: () => void }) => (
@@ -37,6 +37,7 @@ const ChatInterface = ({
   onInputChange,
   onSend,
   isLoading,
+  scrollRef,
 }: {
   onClose: () => void;
   isFullScreen: boolean;
@@ -46,6 +47,7 @@ const ChatInterface = ({
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSend: () => void;
   isLoading: boolean;
+  scrollRef: React.RefObject<HTMLDivElement>;
 }) => (
   <div
     className={`fixed bottom-0 right-0 transition-all duration-300 ${
@@ -77,9 +79,9 @@ const ChatInterface = ({
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="flex-grow overflow-y-auto p-4 space-y-4">
+      <CardContent ref={scrollRef} className="flex-grow overflow-y-auto p-4 space-y-4">
         {messages.length === 0 && (
-           <div className="text-center text-muted-foreground">Ask me anything about DeepFunding!</div>
+           <div className="text-center text-muted-foreground">Ask a question to get started.</div>
         )}
         {messages.map((message, index) => (
           <div
@@ -117,7 +119,7 @@ const ChatInterface = ({
       <CardFooter className="p-4 border-t">
         <div className="flex w-full items-center space-x-2">
           <Input
-            placeholder="Type your message..."
+            placeholder="Ask a question..."
             value={input}
             onChange={onInputChange}
             onKeyDown={(e) => e.key === 'Enter' && !isLoading && onSend()}
@@ -141,6 +143,7 @@ export function ChatProvider() {
 
   const pathname = usePathname();
   const isEmbedPage = pathname ? pathname.startsWith('/embed') : false;
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isEmbedPage) {
@@ -148,30 +151,62 @@ export function ChatProvider() {
     }
   }, [isEmbedPage]);
 
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages, isLoading]);
+
 
   const handleSend = async () => {
-    if (input.trim() === '') return;
+    if (!input.trim()) return;
+
     const userMessage = { role: 'user' as const, content: input };
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
 
     try {
-      const assistantMessageContent = await askDeepFunding({ question: input });
-      const assistantMessage = { role: 'assistant' as const, content: assistantMessageContent };
-      setMessages((prev) => [...prev, assistantMessage]);
-    } catch (error) {
-      console.error('Error fetching response from AI:', error);
-      const errorMessage = {
-        role: 'assistant' as const,
-        content: 'Sorry, something went wrong. Please try again.',
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+      const res = await fetch('/api/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: input }),
+      });
+
+      if (!res.ok) {
+        // Clone the response to be able to read it multiple times
+        const resClone = res.clone();
+        let errorDetails = `Request failed with status ${res.status}`;
+        try {
+          const errorData = await resClone.json();
+          errorDetails = errorData.error || errorDetails;
+        } catch (e) {
+          // If parsing JSON fails, fall back to the text body
+          errorDetails = await res.text();
+        }
+        throw new Error(errorDetails);
+      }
+      
+      const data = await res.json();
+      
+      // Log context to the web console
+      if (data.context) {
+        console.log('--- Context from Server ---');
+        console.log(data.context);
+        console.log('---------------------------');
+      }
+
+      const assistantMessage = { role: 'assistant' as const, content: data.answer };
+      setMessages(prev => [...prev, assistantMessage]);
+
+    } catch (error: any) {
+      const errorMessage = { role: 'assistant' as const, content: `Sorry, something went wrong: ${error.message}` };
+      setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
   };
-
+  
   return (
     <>
       {isOpen ? (
@@ -184,6 +219,7 @@ export function ChatProvider() {
           onInputChange={(e) => setInput(e.target.value)}
           onSend={handleSend}
           isLoading={isLoading}
+          scrollRef={scrollRef}
         />
       ) : (
         !isEmbedPage && <ChatBubble onClick={() => setIsOpen(true)} />
