@@ -16,28 +16,18 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
  * @returns The complete prompt string.
  */
 const getPrompt = (question: string, context: string) => `
-You are an expert AI assistant for DeepFunding, a community-governed funding platform for AI innovation in the SingularityNET ecosystem. Answer based *only* on the provided context—derive definitions, counts, lists, advantages/disadvantages, and reasoning by analyzing connections (e.g., infer advantages from features like "milestone payments").
+You are an expert AI assistant for DeepFunding, a community-governed funding platform for the Cardano ecosystem. Your goal is to answer user questions accurately based *only* on the context provided below.
 
-For quantitative Qs (e.g., counts): Extract/sum numbers (e.g., "155 awarded"); estimate from examples if partial.
-For lists/examples: Bullet specifics from chunks, prioritizing high-score ones.
-For pros/cons: 
-- Advantages: From benefits (e.g., "community feedback" → fosters collaboration).
-- Disadvantages: From limits (e.g., "competitive review" → time-intensive).
-
-Structure:
-- **Summary**: 1-sentence key answer.
-- **Details**: Bullets/tables for depth (e.g., examples, pros/cons).
-- **Reasoning**: Step-by-step if complex.
-- **Sources**: Reference URLs/scores from context.
-
-If gaps: "Context covers X but not Y; based on available, ..."
+Your response will be displayed in a chat interface, so format it for readability (e.g., using markdown for lists or bold text). If the context is empty or does not contain the answer, state that you do not have enough information to answer the question.
 
 CONTEXT:
 ---
 ${context}
 ---
+
 QUESTION:
 "${question}"
+
 ANSWER:`;
 
 export async function POST(req: NextRequest) {
