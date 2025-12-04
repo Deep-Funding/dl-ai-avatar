@@ -127,7 +127,7 @@ const RAG_ENABLED = process.env.NODE_ENV === 'production';
 // Allowed DeepFunding-related hostnames
 const ALLOWED_HOSTNAMES = [
   'deepfunding.ai',
-  'community.deepfunding.ai',
+  'deep-communities.ai',
   'df-manual.github.io',
 ];
 
