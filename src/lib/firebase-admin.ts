@@ -70,17 +70,8 @@
 // }
 
 
-<<<<<<< HEAD
 import { initializeApp, getApps, cert, applicationDefault} from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
-=======
-// src/lib/firebase-admin.ts
-'server-only';
->>>>>>> df0ef18 (Updated.)
-
-import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
-// If your tsconfig has "resolveJsonModule": true, you don't need "assert"
 
 let app: App | null = null;
 let db: Firestore | null = null;
