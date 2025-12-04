@@ -70,27 +70,28 @@
 // }
 
 
+<<<<<<< HEAD
+import { initializeApp, getApps, cert, applicationDefault} from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+=======
 // src/lib/firebase-admin.ts
 'server-only';
+>>>>>>> df0ef18 (Updated.)
 
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
 // If your tsconfig has "resolveJsonModule": true, you don't need "assert"
-import serviceAccount from '../service-account.json';
 
 let app: App | null = null;
 let db: Firestore | null = null;
 
 export function getDb(): Firestore {
   if (!getApps().length) {
-    app = initializeApp({
-      credential: cert({
-        projectId: serviceAccount.project_id,
-        clientEmail: serviceAccount.client_email,
-        privateKey: serviceAccount.private_key.replace(/\\n/g, '\n'),
-      }),
+    initializeApp({
+      credential: applicationDefault(),
     });
-    console.log('✅ Firebase Admin SDK initialized');
+
+    console.log('✅ Firebase Admin SDK initialized with env vars');
   }
 
   if (!db) {
