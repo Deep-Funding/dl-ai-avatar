@@ -1,160 +1,358 @@
+// // src/lib/context-retriever.ts
+// 'server-only';
+
+// import { getDb } from '@/lib/firebase-admin';
+// import { GoogleAuth } from 'google-auth-library';
+
+// // === CONFIG ===
+// const PROJECT_ID = "labs-463322";
+// const REGION = "us-central1";
+// const EMBEDDING_MODEL = "text-embedding-005";
+// const OUTPUT_DIMENSIONALITY = 256;
+// const CHUNKS_COLLECTION = "vector_chunks";
+
+// /**
+//  * Generates a vector embedding for a given text query using the Vertex AI API.
+//  * @param query The text to embed.
+//  * @returns A promise that resolves to an array of numbers representing the embedding.
+//  */
+// async function embedQuery(query: string) {
+//   console.log(`[Context Retriever] Embedding query with Vertex AI: "${query}"`);
+
+//   // Auth: get access token for Vertex AI
+//   const auth = new GoogleAuth({ scopes: "https://www.googleapis.com/auth/cloud-platform" });
+//   const client = await auth.getClient();
+//   const token = await client.getAccessToken();
+
+//   const url = `https://${REGION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${REGION}/publishers/google/models/${EMBEDDING_MODEL}:predict`;
+
+//   // The request body for a singular query.
+//   const requestBody = {
+//     instances: [{
+//       task_type: "RETRIEVAL_QUERY",
+//       content: query,
+//     }],
+//     parameters: {
+//       outputDimensionality: OUTPUT_DIMENSIONALITY,
+//       autoTruncate: true,
+//     },
+//   };
+
+//   try {
+//     const resp = await fetch(url, {
+//       method: "POST",
+//       headers: {
+//         "Authorization": `Bearer ${token.token || ''}`,
+//         "Content-Type": "application/json",
+//       },
+//       body: JSON.stringify(requestBody),
+//     });
+
+//     if (!resp.ok) {
+//       const errText = await resp.text();
+//       throw new Error(`Vertex AI error ${resp.status}: ${errText}`);
+//     }
+
+//     const data = await resp.json();
+//     if (!data.predictions || data.predictions.length === 0) {
+//       throw new Error("No predictions returned from Vertex AI");
+//     }
+
+//     const embeddings = data.predictions[0].embeddings?.values;
+//     if (!embeddings) {
+//       throw new Error("Missing embedding values in Vertex AI response");
+//     }
+    
+//     console.log('[Context Retriever] Query embedded successfully via Vertex AI.');
+//     return embeddings;
+//   } catch (e: any) {
+//     console.error(`[Context Retriever ERROR] Embedding failed:`, e.message);
+//     throw e;
+//   }
+// }
+
+
+// /**
+//  * Retrieves relevant context from the Firestore database based on a user's query.
+//  * @param query The user's question.
+//  * @returns A string containing the combined text of the most relevant document chunks.
+//  */
+// export async function retrieveContext(query: string): Promise<string> {
+//   // Ensure the database is initialized
+//   const db = getDb();
+  
+//   // 1. Embed the user's query using the new Vertex AI method
+//   const queryEmbedding = await embedQuery(query);
+
+//   // 2. Query Firestore for similar vectors
+//   // This is a placeholder for a proper vector similarity search implementation.
+//   // For a real application, you would use a dedicated vector database or a
+//   // Firestore extension like AlloyDB for vector search.
+//   const vectorChunksCollection = db.collection(CHUNKS_COLLECTION);
+//   const results = await vectorChunksCollection.limit(5).get();
+
+//   console.log(
+//     `[Context Retriever] Found ${results.docs.length} potential matches (using simplified retrieval).`
+//   );
+
+//   if (results.empty) {
+//     console.log('[Context Retriever] No matching documents found.');
+//     return '';
+//   }
+
+//   // 3. Combine the text from the retrieved documents
+//   const context = results.docs
+//     .map((doc) => doc.data().text)
+//     .join('\n\n---\n\n');
+//   console.log('[Context Retriever] Context retrieved and combined.');
+
+//   return context;
+// }
+
+
+
 // src/lib/context-retriever.ts
 'server-only';
 
 import { getDb } from '@/lib/firebase-admin';
 import { GoogleAuth } from 'google-auth-library';
 
-// === CONFIG ===
-const PROJECT_ID = "labs-463322";
-const REGION = "us-central1";
-const EMBEDDING_MODEL = "text-embedding-005";
+const PROJECT_ID = 'labs-463322';
+const REGION = 'us-central1';
+const EMBEDDING_MODEL = 'text-embedding-005';
 const OUTPUT_DIMENSIONALITY = 256;
-const CHUNKS_COLLECTION = "vector_chunks";
-const TOP_K = 8; // Increased for richer context
-const SIMILARITY_THRESHOLD = 0.6; // Tune: 0.5-0.7; higher = stricter
-const KEYWORD_BOOST_TERMS = ['funded', 'awarded', 'proposal', 'RFP', 'circle', 'grant']; // Add site-specific
+const CHUNKS_COLLECTION = 'vector_chunks';
+const RAG_ENABLED = process.env.NODE_ENV === 'production';
 
-// ... (keep your embedQuery function unchanged—it's solid!)
+// Allowed DeepFunding-related hostnames
+const ALLOWED_HOSTNAMES = [
+  'deepfunding.ai',
+  'community.deepfunding.ai',
+  'df-manual.github.io',
+];
+
+type ChunkDoc = {
+  source: string;
+  url: string;
+  text: string;
+  summary?: string;
+  embedding: number[];
+  timestamp: string;
+};
+
+export type RetrievedContext = {
+  combinedContext: string;
+  chunks: Array<{
+    url: string;
+    text: string;
+    summary?: string;
+    score: number;
+    timestamp: string;
+  }>;
+};
+
+// ----------------- Auth / Embedding -----------------
+
+let authClient: any | null = null;
+
+async function getAuthToken(): Promise<string> {
+  if (!authClient) {
+    const auth = new GoogleAuth({
+      scopes: 'https://www.googleapis.com/auth/cloud-platform',
+    });
+    authClient = await auth.getClient();
+  }
+  const token = await authClient.getAccessToken();
+  return token.token || '';
+}
+
 /**
  * Generates a vector embedding for a given text query using the Vertex AI API.
- * @param query The text to embed.
- * @returns A promise that resolves to an array of numbers representing the embedding.
  */
-async function embedQuery(query: string) {
+async function embedQuery(query: string): Promise<number[]> {
   console.log(`[Context Retriever] Embedding query with Vertex AI: "${query}"`);
 
-  // Auth: get access token for Vertex AI
-  const auth = new GoogleAuth({ scopes: "https://www.googleapis.com/auth/cloud-platform" });
-  const client = await auth.getClient();
-  const token = await client.getAccessToken();
-
+  const token = await getAuthToken();
   const url = `https://${REGION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${REGION}/publishers/google/models/${EMBEDDING_MODEL}:predict`;
 
-  // The request body for a singular query.
   const requestBody = {
-    instances: [{
-      task_type: "RETRIEVAL_QUERY",
-      content: query,
-    }],
+    instances: [
+      {
+        task_type: 'RETRIEVAL_QUERY',
+        content: query,
+      },
+    ],
     parameters: {
       outputDimensionality: OUTPUT_DIMENSIONALITY,
       autoTruncate: true,
     },
   };
 
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!resp.ok) {
+    const errText = await resp.text();
+    console.error('[Context Retriever ERROR] Vertex AI error:', resp.status, errText);
+    throw new Error(`Vertex AI error ${resp.status}: ${errText}`);
+  }
+
+  const data = await resp.json();
+  if (!data.predictions || data.predictions.length === 0) {
+    throw new Error('No predictions returned from Vertex AI');
+  }
+
+  const embeddings = data.predictions[0].embeddings?.values;
+  if (!embeddings) {
+    throw new Error('Missing embedding values in Vertex AI response');
+  }
+
+  console.log('[Context Retriever] Query embedded successfully via Vertex AI.');
+  return embeddings;
+}
+
+// ----------------- Similarity & filters -----------------
+
+function cosineSimilarity(a: number[], b: number[]): number {
+  if (!a.length || !b.length || a.length !== b.length) return 0;
+  let dot = 0;
+  let na = 0;
+  let nb = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    na += a[i] * a[i];
+    nb += b[i] * b[i];
+  }
+  if (!na || !nb) return 0;
+  return dot / (Math.sqrt(na) * Math.sqrt(nb));
+}
+
+function isAllowedSource(sourceUrl: string): boolean {
   try {
-    const resp = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${token.token || ''}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(requestBody),
-    });
-
-    if (!resp.ok) {
-      const errText = await resp.text();
-      throw new Error(`Vertex AI error ${resp.status}: ${errText}`);
-    }
-
-    const data = await resp.json();
-    if (!data.predictions || data.predictions.length === 0) {
-      throw new Error("No predictions returned from Vertex AI");
-    }
-
-    const embeddings = data.predictions[0].embeddings?.values;
-    if (!embeddings) {
-      throw new Error("Missing embedding values in Vertex AI response");
-    }
-    
-    console.log('[Context Retriever] Query embedded successfully via Vertex AI.');
-    return embeddings;
-  } catch (e: any) {
-    console.error(`[Context Retriever ERROR] Embedding failed:`, e.message);
-    throw e;
+    const hostname = new URL(sourceUrl).hostname;
+    return ALLOWED_HOSTNAMES.includes(hostname);
+  } catch {
+    return false;
   }
 }
 
+// ----------------- Main retrieval API -----------------
+
 /**
- * Computes cosine similarity between two vectors.
- * @param vecA First vector (array of numbers).
- * @param vecB Second vector.
- * @returns Similarity score (0-1).
+ * Retrieves relevant context (with metadata) for a user's query.
+ * Returns both the combined context string and the list of top chunks.
  */
-function cosineSimilarity(vecA: number[], vecB: number[]): number {
-  if (vecA.length !== vecB.length) return 0;
-  const dotProduct = vecA.reduce((sum, a, i) => sum + a * vecB[i], 0);
-  const magA = Math.sqrt(vecA.reduce((sum, a) => sum + a * a, 0));
-  const magB = Math.sqrt(vecB.reduce((sum, b) => sum + b * b, 0));
-  return dotProduct / (magA * magB) || 0; // Avoid div-by-zero
+export async function getContextForQuery(
+  query: string,
+  options?: { topK?: number; minScore?: number }
+): Promise<RetrievedContext | null> {
+  // 🔧 Disable RAG in dev to avoid auth hell
+  if (!RAG_ENABLED) {
+    console.log('[Context Retriever] RAG disabled in non-production environment.');
+    return null;
+  }
+
+  const db = getDb();
+  const topK = options?.topK ?? 6;
+  const minScore = options?.minScore ?? 0.55; // flexible-but-grounded (mode B)
+
+  // 1. Embed the user's query
+  const queryEmbedding = await embedQuery(query);
+
+  // 2. Fetch candidate chunks from Firestore
+  // NOTE: Firestore is not a vector DB, so we approximate by:
+  //   - limiting to recent N docs
+  //   - computing cosine similarity on the app side
+  const snapshot = await db
+    .collection(CHUNKS_COLLECTION)
+    .orderBy('timestamp', 'desc')
+    .limit(500) // small candidate pool
+    .get();
+
+  console.log(
+    `[Context Retriever] Loaded ${snapshot.size} candidate chunks from Firestore.`
+  );
+
+  if (snapshot.empty) {
+    console.log('[Context Retriever] No chunks in collection.');
+    return null;
+  }
+
+  const candidates: ChunkDoc[] = [];
+  snapshot.forEach((doc) => {
+    const data = doc.data() as any;
+    if (!data.embedding || !Array.isArray(data.embedding)) return;
+    if (!isAllowedSource(data.source)) return;
+
+    candidates.push({
+      source: data.source,
+      url: data.url,
+      text: data.text,
+      summary: data.summary,
+      embedding: data.embedding,
+      timestamp: data.timestamp,
+    });
+  });
+
+  if (!candidates.length) {
+    console.log('[Context Retriever] No candidates from allowed sources.');
+    return null;
+  }
+
+  // 3. Compute similarity scores
+  const scored = candidates
+    .map((c) => ({
+      ...c,
+      score: cosineSimilarity(queryEmbedding, c.embedding),
+    }))
+    .filter((c) => c.score >= minScore)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, topK);
+
+  if (!scored.length) {
+    console.log(
+      `[Context Retriever] No chunks above similarity threshold (${minScore}).`
+    );
+    return null;
+  }
+
+  // 4. Build combined context for LLM
+  const combinedContext = scored
+    .map(
+      (c, idx) =>
+        `[DOC ${idx + 1}] URL: ${c.url}\nScore: ${c.score.toFixed(
+          3
+        )}\nTimestamp: ${c.timestamp}\nContent:\n${c.text}`
+    )
+    .join('\n\n-----\n\n');
+
+  console.log(
+    `[Context Retriever] Returning ${scored.length} chunks as context.`
+  );
+
+  return {
+    combinedContext,
+    chunks: scored.map((c) => ({
+      url: c.url,
+      text: c.text,
+      summary: c.summary,
+      score: c.score,
+      timestamp: c.timestamp,
+    })),
+  };
 }
 
 /**
- * Retrieves relevant context from Firestore using vector similarity.
- * @param query The user's question.
- * @returns Formatted string with top relevant chunks + metadata.
+ * Backwards-compatible wrapper:
+ * returns only the combined context string (as your original API did).
  */
 export async function retrieveContext(query: string): Promise<string> {
-  const db = getDb();
-  const queryEmbedding = await embedQuery(query);
-  console.log(`[Context Retriever] Query "${query}" embedded; searching for similar chunks.`);
-
-  const vectorChunksCollection = db.collection(CHUNKS_COLLECTION);
-  
-  // Step 1: Fetch all chunks (or paginate for large DB; assume <10k for now)
-  const allDocs = await vectorChunksCollection.get();
-  if (allDocs.empty) {
-    console.log('[Context Retriever] No chunks in DB.');
-    return '';
-  }
-
-  const allChunks = allDocs.docs.map(doc => ({
-    id: doc.id,
-    data: doc.data() as { text: string; embedding: number[]; source: string; url: string }, // Type your schema
-    score: 0, // Placeholder
-  }));
-
-  console.log(`[Context Retriever] Loaded ${allChunks.length} total chunks from Firestore.`);
-
-  // Step 2: Compute similarities
-  const scoredChunks = allChunks.map(chunk => ({
-    ...chunk,
-    score: cosineSimilarity(queryEmbedding, chunk.data.embedding),
-  }));
-
-  // Step 3: Hybrid boost—if low vector hits, filter by keywords
-  let relevantChunks = scoredChunks
-    .filter(chunk => chunk.score >= SIMILARITY_THRESHOLD)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, TOP_K);
-
-  if (relevantChunks.length < 3) {
-    console.log('[Context Retriever] Low vector matches; applying keyword boost.');
-    const keywordMatches = allChunks
-      .filter(chunk => KEYWORD_BOOST_TERMS.some(term => chunk.data.text.toLowerCase().includes(term)))
-      .map(chunk => ({ ...chunk, score: cosineSimilarity(queryEmbedding, chunk.data.embedding) }))
-      .sort((a, b) => b.score - a.score)
-      .slice(0, TOP_K / 2); // Supplement, don't overwhelm
-
-    // Merge and dedup (simple: take union, re-sort)
-    const mergedSet = new Set([...relevantChunks, ...keywordMatches].map(c => c.id));
-    relevantChunks = Array.from(mergedSet).map(id => 
-      scoredChunks.find(c => c.id === id)!
-    ).sort((a, b) => b.score - a.score).slice(0, TOP_K);
-  }
-
-  console.log(`[Context Retriever] Retrieved ${relevantChunks.length} relevant chunks (top scores: ${relevantChunks.slice(0, 3).map(c => c.score.toFixed(3)).join(', ')}).`);
-
-  if (relevantChunks.length === 0) {
-    return '';
-  }
-
-  // Step 4: Format context with metadata for better LLM use
-  const context = relevantChunks
-    .map(chunk => 
-      `**Source:** ${chunk.data.source}\n**URL:** ${chunk.data.url}\n**Relevance Score:** ${chunk.score.toFixed(3)}\n**Text:** ${chunk.data.text}`
-    )
-    .join('\n\n---\n\n');
-
-  return context;
+  const result = await getContextForQuery(query);
+  return result?.combinedContext ?? '';
 }
