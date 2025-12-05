@@ -29,21 +29,29 @@ type ChatMessage = {
   debugContext?: string; // raw combined context from server (dev only)
 };
 
-// Helper to strip the extra "Sources:\nsite(score)\n...\nThese sources were selected..."
+// Helper to strip the extra "Sources:\nsite(score)\n..." block,
+// and also the explanatory sentence if present.
 function cleanAnswerText(raw: string): string {
   if (!raw) return raw;
 
-  const marker =
-    'These sources were selected as the most relevant matches to your question';
-  const markerIndex = raw.indexOf(marker);
+  let text = raw.trim();
 
-  if (markerIndex !== -1) {
-    const sourcesIndex = raw.lastIndexOf('Sources:', markerIndex);
-    const cutIndex = sourcesIndex !== -1 ? sourcesIndex : markerIndex;
-    return raw.slice(0, cutIndex).trim();
+  // 1) Remove trailing block starting with a plain "Sources:" line
+  //    (this is the domain(score) list, e.g. deep-communities.ai(0.69))
+  const secondSourcesIdx = text.indexOf('\nSources:\n');
+  if (secondSourcesIdx !== -1) {
+    text = text.slice(0, secondSourcesIdx).trim();
   }
 
-  return raw.trim();
+  // 2) Also remove the explanatory sentence if it appears (safety net)
+  const marker =
+    'These sources were selected as the most relevant matches to your question';
+  const markerIndex = text.indexOf(marker);
+  if (markerIndex !== -1) {
+    text = text.slice(0, markerIndex).trim();
+  }
+
+  return text;
 }
 
 const ChatBubble = ({ onClick }: { onClick: () => void }) => (
