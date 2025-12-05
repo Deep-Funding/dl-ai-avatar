@@ -36,6 +36,9 @@ function cleanAnswerText(raw: string): string {
 
   let text = raw.trim();
 
+  // Fix "1.\n  **Direct answer**" -> "1. **Direct answer**"
+  text = text.replace(/([0-9]+)\.\s*\n\s*\*\*/g, '$1. **');
+
   // 1) Remove trailing block starting with a plain "Sources:" line
   //    (this is the domain(score) list, e.g. deep-communities.ai(0.69))
   const secondSourcesIdx = text.indexOf('\nSources:\n');
@@ -53,6 +56,7 @@ function cleanAnswerText(raw: string): string {
 
   return text;
 }
+
 
 const ChatBubble = ({ onClick }: { onClick: () => void }) => (
   <Button
@@ -176,7 +180,7 @@ const ChatInterface = ({
                 </div>
 
                 {/* Sources (assistant only, UI list) */}
-                {message.role === 'assistant' &&
+                {/*message.role === 'assistant' &&
                   message.sources &&
                   message.sources.length > 0 && (
                     <div className="ml-10 text-xs text-muted-foreground max-w-[80%] space-y-1">
@@ -201,7 +205,7 @@ const ChatInterface = ({
                         </ul>
                       </div>
                     </div>
-                  )}
+                  )*/}
 
                 {/* Note: debug "Show context" UI removed as requested */}
               </div>
