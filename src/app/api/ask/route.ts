@@ -37,7 +37,7 @@ Now respond in this structure:
 
 1. Direct answer.
 2. Short explanation (mention when you are interpreting beyond the docs).
-3. "Sources:" followed by 1–3 relevant URLs from the context that is clickable, if any. If you only interpreted, write:
+3. "Sources:" followed by 1–3 relevant URLs from the context which are always clickable, if any. If you only interpreted, write:
    "Sources: None (interpretation based on general knowledge)".
 `;
 
