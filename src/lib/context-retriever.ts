@@ -135,6 +135,106 @@ function isAllowedSource(sourceUrl: string): boolean {
  * Retrieves relevant context (with metadata) for a user's query.
  * Returns both the combined context string and the list of top chunks.
  */
+// export async function getContextForQuery(
+//   query: string,
+//   options?: { topK?: number; minScore?: number }
+// ): Promise<RetrievedContext | null> {
+//   // 🔧 Disable RAG in dev to avoid auth hell
+//   if (!RAG_ENABLED) {
+//     console.log('[Context Retriever] RAG disabled in non-production environment.');
+//     return null;
+//   }
+
+//   const db = getDb();
+//   const topK = options?.topK ?? 10;
+//   const minScore = options?.minScore ?? 0.4; // flexible-but-grounded (mode B)
+
+//   // 1. Embed the user's query
+//   const queryEmbedding = await embedQuery(query);
+
+//   // 2. Fetch candidate chunks from Firestore
+//   // NOTE: Firestore is not a vector DB, so we approximate by:
+//   //   - limiting to recent N docs
+//   //   - computing cosine similarity on the app side
+//   const snapshot = await db
+//     .collection(CHUNKS_COLLECTION)
+//     //.orderBy('timestamp', 'desc')
+//     .limit(2000)
+//     .get();
+
+//   console.log(
+//     `[Context Retriever] Loaded ${snapshot.size} candidate chunks from Firestore.`
+//   );
+
+//   if (snapshot.empty) {
+//     console.log('[Context Retriever] No chunks in collection.');
+//     return null;
+//   }
+
+//   const candidates: ChunkDoc[] = [];
+//   snapshot.forEach((doc) => {
+//     const data = doc.data() as any;
+//     if (!data.embedding || !Array.isArray(data.embedding)) return;
+//     if (!isAllowedSource(data.source)) return;
+
+//     candidates.push({
+//       source: data.source,
+//       url: data.url,
+//       text: data.text,
+//       summary: data.summary,
+//       embedding: data.embedding,
+//       timestamp: data.timestamp,
+//     });
+//   });
+
+//   if (!candidates.length) {
+//     console.log('[Context Retriever] No candidates from allowed sources.');
+//     return null;
+//   }
+
+//   // 3. Compute similarity scores
+//   const scored = candidates
+//     .map((c) => ({
+//       ...c,
+//       score: cosineSimilarity(queryEmbedding, c.embedding),
+//     }))
+//     .filter((c) => c.score >= minScore)
+//     .sort((a, b) => b.score - a.score)
+//     .slice(0, topK);
+
+//   if (!scored.length) {
+//     console.log(
+//       `[Context Retriever] No chunks above similarity threshold (${minScore}).`
+//     );
+//     return null;
+//   }
+
+//   // 4. Build combined context for LLM
+//   const combinedContext = scored
+//     .map(
+//       (c, idx) =>
+//         `[DOC ${idx + 1}] URL: ${c.url}\nScore: ${c.score.toFixed(
+//           3
+//         )}\nTimestamp: ${c.timestamp}\nContent:\n${c.text}`
+//     )
+//     .join('\n\n-----\n\n');
+
+//   console.log(
+//     `[Context Retriever] Returning ${scored.length} chunks as context.`
+//   );
+
+//   return {
+//     combinedContext,
+//     chunks: scored.map((c) => ({
+//       url: c.url,
+//       text: c.text,
+//       summary: c.summary,
+//       score: c.score,
+//       timestamp: c.timestamp,
+//     })),
+//   };
+// }
+
 export async function getContextForQuery(
   query: string,
   options?: { topK?: number; minScore?: number }
@@ -153,9 +253,6 @@ export async function getContextForQuery(
   const queryEmbedding = await embedQuery(query);
 
   // 2. Fetch candidate chunks from Firestore
-  // NOTE: Firestore is not a vector DB, so we approximate by:
-  //   - limiting to recent N docs
-  //   - computing cosine similarity on the app side
   const snapshot = await db
     .collection(CHUNKS_COLLECTION)
     //.orderBy('timestamp', 'desc')
@@ -192,6 +289,18 @@ export async function getContextForQuery(
     return null;
   }
 
+  // 🔍 NEW: observability – see candidate distribution by host
+  const candidateByHost: Record<string, number> = {};
+  for (const c of candidates) {
+    try {
+      const host = new URL(c.url).hostname;
+      candidateByHost[host] = (candidateByHost[host] || 0) + 1;
+    } catch {
+      candidateByHost['[invalid-url]'] = (candidateByHost['[invalid-url]'] || 0) + 1;
+    }
+  }
+  console.log('[Context Retriever] Candidate chunks by host:', candidateByHost);
+
   // 3. Compute similarity scores
   const scored = candidates
     .map((c) => ({
@@ -208,6 +317,21 @@ export async function getContextForQuery(
     );
     return null;
   }
+
+  // 🔍 NEW: observability – see selected top chunks by host
+  const selectedByHost: Record<string, number> = {};
+  for (const c of scored) {
+    try {
+      const host = new URL(c.url).hostname;
+      selectedByHost[host] = (selectedByHost[host] || 0) + 1;
+    } catch {
+      selectedByHost['[invalid-url]'] = (selectedByHost['[invalid-url]'] || 0) + 1;
+    }
+  }
+  console.log(
+    '[Context Retriever] Selected top chunks by host (after similarity filter):',
+    selectedByHost
+  );
 
   // 4. Build combined context for LLM
   const combinedContext = scored
@@ -234,6 +358,7 @@ export async function getContextForQuery(
     })),
   };
 }
+
 
 /**
  * Backwards-compatible wrapper:

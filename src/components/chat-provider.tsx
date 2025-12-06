@@ -29,6 +29,58 @@ type ChatMessage = {
   debugContext?: string; // raw combined context from server (dev only)
 };
 
+const STORAGE_KEY = 'deep-avatar-chat-history-v1';
+
+function isAcknowledgement(text: string): boolean {
+  const normalized = text
+    .toLowerCase()
+    .replace(/[!?.,]/g, '')
+    .trim();
+
+  if (!normalized) return false;
+
+  const exactMatches = new Set([
+    'thanks',
+    'thank you',
+    'thank you very much',
+    'thanks a lot',
+    'ok',
+    'okay',
+    'k',
+    'ok thanks',
+    'ok thank you',
+    'cool',
+    'nice',
+    'great',
+    'awesome',
+    'got it',
+    'understood',
+    'makes sense',
+    'sounds good',
+    'all good',
+    'perfect',
+    'noted',
+  ]);
+
+  if (exactMatches.has(normalized)) return true;
+
+  // Slightly looser matches (phrases inside a longer sentence)
+  const partials = [
+    'thanks',
+    'thank you',
+    'got it',
+    'understood',
+    'makes sense',
+    'sounds good',
+    'all good',
+  ];
+
+  return partials.some((p) => normalized.includes(p));
+}
+
+
+
+
 // Helper to strip the extra "Sources:\nsite(score)\n..." block,
 // and also the explanatory sentence if present.
 function cleanAnswerText(raw: string): string {
@@ -84,6 +136,7 @@ const ChatInterface = ({
   onSend,
   isLoading,
   scrollRef,
+  onQuickInsert
 }: {
   onClose: () => void;
   isFullScreen: boolean;
@@ -94,6 +147,7 @@ const ChatInterface = ({
   onSend: () => void;
   isLoading: boolean;
   scrollRef: React.RefObject<HTMLDivElement>;
+  onQuickInsert: (q: string) => void;
 }) => {
   // Wider bubbles in full screen
   const bubbleWidthClass = isFullScreen
@@ -102,14 +156,12 @@ const ChatInterface = ({
 
   return (
     <div
-      className={`fixed transition-all duration-300 ${
-        isFullScreen ? 'inset-0' : 'bottom-0 right-0 w-full max-w-md h-[70vh]'
-      } m-0 z-50`}
+      className={`fixed transition-all duration-300 ${isFullScreen ? 'inset-0' : 'bottom-0 right-0 w-full max-w-md h-[70vh]'
+        } m-0 z-50`}
     >
       <Card
-        className={`flex flex-col h-full bg-card/80 backdrop-blur-sm border-border/50 ${
-          isFullScreen ? 'rounded-none' : 'rounded-t-lg'
-        }`}
+        className={`flex flex-col h-full bg-card/80 backdrop-blur-sm border-border/50 ${isFullScreen ? 'rounded-none' : 'rounded-t-lg'
+          }`}
       >
         <CardHeader className="flex flex-row items-center justify-between p-4">
           <div className="flex items-center space-x-4">
@@ -142,19 +194,67 @@ const ChatInterface = ({
           ref={scrollRef}
           className="flex-grow overflow-y-auto p-4 space-y-4"
         >
-          {messages.length === 0 && (
+          {/* {messages.length === 0 && (
             <div className="text-center text-muted-foreground">
               Ask a question to get started.
             </div>
+          )} */}
+
+          {messages.length === 0 && (
+            <div className="text-center text-muted-foreground space-y-3">
+              <p>Ask a question to get started, for example:</p>
+              <div className="flex flex-wrap gap-2 justify-center">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                  onClick={() =>
+                    onQuickInsert('What is a Workgroup in DeepFunding and how does it differ from a Circle?')
+                  }
+                >
+                  Workgroups vs Circles
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                  onClick={() =>
+                    onQuickInsert('How does governance work in DeepFunding?')
+                  }
+                >
+                  Governance structure
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                  onClick={() =>
+                    onQuickInsert('How does the compensation scheme for Circle members work?')
+                  }
+                >
+                  Compensation scheme
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                  onClick={() =>
+                    onQuickInsert('What is the role of the IT Circle and how can I interact with them?')
+                  }
+                >
+                  IT Circle role
+                </Button>
+              </div>
+            </div>
           )}
+
 
           {messages.map((message) => {
             return (
               <div
                 key={message.id}
-                className={`flex flex-col gap-1 ${
-                  message.role === 'user' ? 'items-end' : 'items-start'
-                }`}
+                className={`flex flex-col gap-1 ${message.role === 'user' ? 'items-end' : 'items-start'
+                  }`}
               >
                 <div className="flex items-end gap-2">
                   {message.role === 'assistant' && (
@@ -165,10 +265,9 @@ const ChatInterface = ({
                       ${bubbleWidthClass}
                       rounded-lg px-4 py-2
                       text-[15px] leading-relaxed
-                      ${
-                        message.role === 'user'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-secondary text-secondary-foreground'
+                      ${message.role === 'user'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-secondary text-secondary-foreground/80 [&_strong]:text-secondary-foreground [&_strong]:font-semibold'
                       }
                     `}
                   >
@@ -252,6 +351,11 @@ export function ChatProvider() {
   const isEmbedPage = pathname ? pathname.startsWith('/embed') : false;
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const handleQuickInsert = (q: string) => {
+    setInput(q);
+  };
+
+
   useEffect(() => {
     if (isEmbedPage) {
       setIsOpen(true);
@@ -263,6 +367,36 @@ export function ChatProvider() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, isLoading]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+
+      const parsed = JSON.parse(raw) as ChatMessage[];
+      if (Array.isArray(parsed)) {
+        setMessages(parsed);
+        console.log('[Chat] Restored conversation from localStorage.');
+      }
+    } catch (err) {
+      console.error('[Chat] Failed to restore conversation:', err);
+    }
+  }, []);
+
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+    } catch (err) {
+      console.error('[Chat] Failed to save conversation:', err);
+    }
+  }, [messages]);
+
+
 
   const newId = () =>
     typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -282,6 +416,19 @@ export function ChatProvider() {
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
+
+     // 🧠 If this is just an acknowledgement like "thanks", don't call the API.
+  if (isAcknowledgement(question)) {
+    const assistantMessage: ChatMessage = {
+      id: newId(),
+      role: 'assistant',
+      content:
+        "You're welcome! If you have more DeepFunding questions, feel free to ask.",
+    };
+    setMessages((prev) => [...prev, assistantMessage]);
+    setIsLoading(false);
+    return;
+  }
 
     try {
       const res = await fetch('/api/ask', {
@@ -352,6 +499,7 @@ export function ChatProvider() {
           onSend={handleSend}
           isLoading={isLoading}
           scrollRef={scrollRef}
+          onQuickInsert={handleQuickInsert}
         />
       ) : (
         !isEmbedPage && <ChatBubble onClick={() => setIsOpen(true)} />
