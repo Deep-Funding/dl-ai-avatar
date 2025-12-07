@@ -198,7 +198,21 @@ const ChatInterface = ({
               <div key={message.id} className={`flex flex-col gap-1 ${message.role === 'user' ? 'items-end' : 'items-start'}`}>
                 <div className="flex items-end gap-2">
                   {isAssistant && <Bot className="h-8 w-8 text-primary" />}
-                  <div className={`${bubbleWidthClass} rounded-lg px-4 py-2 text-[15px] leading-relaxed ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground/80 [&_strong]:text-secondary-foreground [&_strong]:font-semibold'}`}>
+                  <div
+                    className={`
+    ${bubbleWidthClass}
+    px-4 py-2
+    text-[15px] leading-relaxed
+    rounded-3sxl
+    shadow-sm
+    animate-fadeInSlideUp
+
+    ${message.role === 'user'
+                        ? 'bg-blue-600 text-white rounded-br-none'
+                        : 'bg-[#2f2f2f] text-white/90 rounded-bl-none'
+                      }
+  `}
+                  >
                     {/* If message.meta?.streaming is true, we can show a subtle "streaming" indicator style (optional) */}
                     {message.meta?.streaming ? (
                       <span className="opacity-90">{message.content}<span className="blinking-cursor">▍</span></span>
@@ -485,17 +499,17 @@ export function ChatProvider() {
           prev.map((m) =>
             m.id === placeholderId
               ? {
-                  ...m,
-                  content: answer,
-                  sources: (data.sources || []).map((s: any) => ({
-                    url: s.url,
-                    score: s.score,
-                    timestamp: s.timestamp,
-                    summary: s.summary ?? null,
-                  })),
-                  debugContext: data.context ?? undefined,
-                  meta: { ...(m.meta || {}), streaming: false },
-                }
+                ...m,
+                content: answer,
+                sources: (data.sources || []).map((s: any) => ({
+                  url: s.url,
+                  score: s.score,
+                  timestamp: s.timestamp,
+                  summary: s.summary ?? null,
+                })),
+                debugContext: data.context ?? undefined,
+                meta: { ...(m.meta || {}), streaming: false },
+              }
               : m
           )
         );
