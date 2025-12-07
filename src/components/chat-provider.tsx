@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
-import { Bot, Maximize, Minimize, User, X } from 'lucide-react';
+import { Bot, Maximize, Minimize, Plus, User, X, ArrowDown } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -136,7 +136,9 @@ const ChatInterface = ({
   onSend,
   isLoading,
   scrollRef,
-  onQuickInsert
+  onQuickInsert,
+  onNewChat,
+  expandedContextIds,
 }: {
   onClose: () => void;
   isFullScreen: boolean;
@@ -148,11 +150,32 @@ const ChatInterface = ({
   isLoading: boolean;
   scrollRef: React.RefObject<HTMLDivElement>;
   onQuickInsert: (q: string) => void;
+  onNewChat: () => void;
+  expandedContextIds: string[];
+
 }) => {
   // Wider bubbles in full screen
   const bubbleWidthClass = isFullScreen
     ? 'max-w-[80%]'
     : 'max-w-xs md:max-w-md lg:max-w-lg';
+
+  const [showScrollDown, setShowScrollDown] = useState(false);
+
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const onScroll = () => {
+      const isBottom =
+        el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+      setShowScrollDown(!isBottom);
+    };
+
+    el.addEventListener("scroll", onScroll);
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [scrollRef]);
+
 
   return (
     <div
@@ -184,6 +207,9 @@ const ChatInterface = ({
                 <Maximize className="h-4 w-4" />
               )}
             </Button>
+            <Button variant="ghost" size="icon" onClick={onNewChat}>
+              <Plus className="h-4 w-4" />
+            </Button>
             <Button variant="ghost" size="icon" onClick={onClose}>
               <X className="h-4 w-4" />
             </Button>
@@ -192,7 +218,7 @@ const ChatInterface = ({
 
         <CardContent
           ref={scrollRef}
-          className="flex-grow overflow-y-auto p-4 space-y-4"
+          className="flex-grow overflow-y-auto p-4 space-y-4 relative"
         >
           {/* {messages.length === 0 && (
             <div className="text-center text-muted-foreground">
@@ -326,6 +352,18 @@ const ChatInterface = ({
             the official DeepFunding team.
           </p>
 
+          {showScrollDown && (
+            <Button
+              className="absolute bottom-20 right-4 rounded-full p-2 shadow-lg bg-primary text-primary-foreground"
+              onClick={() => {
+                const el = scrollRef.current;
+                if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+              }}
+            >
+              <ArrowDown className="h-5 w-5" />
+            </Button>
+          )}
+
         </CardContent>
 
         <CardFooter className="p-4 border-t">
@@ -360,9 +398,21 @@ export function ChatProvider() {
   const isEmbedPage = pathname ? pathname.startsWith('/embed') : false;
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const [showScrollDown, setShowScrollDown] = useState(false);
+  const [expandedContextIds, setExpandedContextIds] = useState<string[]>([]);
+
+
+
   const handleQuickInsert = (q: string) => {
     setInput(q);
   };
+
+  const handleNewChat = () => {
+    setMessages([]);
+    setExpandedContextIds([]);
+    localStorage.setItem("deepfunding-chat", JSON.stringify([]));
+  };
+
 
 
   useEffect(() => {
@@ -404,6 +454,20 @@ export function ChatProvider() {
       console.error('[Chat] Failed to save conversation:', err);
     }
   }, [messages]);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const handleScroll = () => {
+      const isBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+      setShowScrollDown(!isBottom);
+    };
+
+    el.addEventListener("scroll", handleScroll);
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, [scrollRef]);
+
 
 
 
@@ -509,6 +573,8 @@ export function ChatProvider() {
           isLoading={isLoading}
           scrollRef={scrollRef}
           onQuickInsert={handleQuickInsert}
+          onNewChat={handleNewChat}
+          expandedContextIds={expandedContextIds}
         />
       ) : (
         !isEmbedPage && <ChatBubble onClick={() => setIsOpen(true)} />
