@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { Orbitron } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
+import './fonts/general-sans.css';
+
 
 const orbitron = Orbitron({ subsets: ['latin'], variable: '--font-sans' });
 
