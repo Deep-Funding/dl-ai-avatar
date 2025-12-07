@@ -56,6 +56,17 @@ html {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.blinking-cursor {
+  display: inline-block;
+  margin-left: 4px;
+  animation: blink 0.5s ease-in-out infinite; /* adjust speed here */
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 1; }
+}
+
 
 @keyframes fadeInSlideUp {
   0% {
@@ -72,3 +83,19 @@ html {
   animation: fadeInSlideUp 0.25s ease-out both;
 }
 
+.ai-heading {
+  font-weight: 700; /* bold */
+  font-size: 1.05rem;
+  color: white;
+}
+
+.ai-subheading {
+  font-weight: 600;
+  color: white;
+}
+
+.ai-sources-heading {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  margin-top: 6px;
+}

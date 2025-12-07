@@ -214,7 +214,7 @@ const ChatInterface = ({
 
                     {/* If message.meta?.streaming is true, we can show a subtle "streaming" indicator style (optional) */}
                     {message.meta?.streaming ? (
-                      <span className="opacity-90">{message.content}<span className="blinking-cursor">▍</span></span>
+                      <span className="opacity-90">{message.content}<span className="blinking-cursor">●</span></span>
                     ) : (
                       <LinkedText text={message.content} />
                     )}
