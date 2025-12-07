@@ -1,10 +1,12 @@
 import type { Metadata } from 'next';
-import { Orbitron } from 'next/font/google';
+import { Orbitron, Inter } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
 
 
 const orbitron = Orbitron({ subsets: ['latin'], variable: '--font-sans' });
+const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
+
 
 export const metadata: Metadata = {
   title: 'DeepFunding AI',
@@ -21,7 +23,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={cn('min-h-screen bg-background font-sans antialiased', orbitron.variable)}>
+      <body className={cn('min-h-screen bg-background font-sans antialiased', inter.variable)}>
         {children}
       </body>
     </html>

@@ -211,8 +211,20 @@ const ChatInterface = ({
       className={`fixed transition-all duration-300 ${isFullScreen ? 'inset-0' : 'bottom-0 right-0 w-full max-w-md h-[70vh]'
         } m-0 z-50`}
     >
+
+      {/* 🔥 FULLSCREEN BACKGROUND DIM OVERLAY */}
+      {isFullScreen && (
+        <div
+          className="
+          absolute inset-0
+          bg-black/50 backdrop-blur-sm
+          pointer-events-none
+          z-0
+        "
+        />
+      )}
       <Card
-        className={`flex flex-col h-full bg-card/80 backdrop-blur-sm border-border/50 ${isFullScreen ? 'rounded-none' : 'rounded-t-lg'
+        className={`relative flex flex-col h-full bg-card/80 backdrop-blur-sm border-border/50 ${isFullScreen ? 'rounded-none' : 'rounded-t-lg'
           }`}
       >
         <CardHeader className="flex flex-row items-center justify-between p-4">
