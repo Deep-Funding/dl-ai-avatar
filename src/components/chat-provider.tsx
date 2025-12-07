@@ -218,7 +218,7 @@ const ChatInterface = ({
         <CardHeader className="flex flex-row items-center justify-between p-4">
           <div className="flex items-center space-x-4">
             <Avatar>
-              <AvatarImage src="/public/logo.png" alt="Deep AI" />
+              <AvatarImage src="/logo.png" alt="Deep AI" />
               <AvatarFallback>DF</AvatarFallback>
             </Avatar>
             <div>

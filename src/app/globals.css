@@ -51,3 +51,8 @@
   animation: chatgptAppear 0.22s ease-out forwards;
 }
 
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+

@@ -19,8 +19,7 @@ const config = {
     },
     extend: {
       fontFamily: {
-        //sans: ["var(--font-sans)", "sans-serif"],
-        sans: ["GeneralSans", "sans-serif"],
+        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
       },
       keyframes: {
         "accordion-down": {
