@@ -203,16 +203,15 @@ const ChatInterface = ({
     ${bubbleWidthClass}
     px-4 py-2
     text-[15px] leading-relaxed
-    rounded-3sxl
-    shadow-sm
     animate-fadeInSlideUp
 
     ${message.role === 'user'
-                        ? 'bg-blue-600 text-white rounded-br-none'
-                        : 'bg-[#2f2f2f] text-white/90 rounded-bl-none'
+                        ? 'bg-[#2f2f2f] text-white rounded-3xl rounded-br-none shadow-sm'
+                        : 'text-secondary-foreground'
                       }
   `}
                   >
+
                     {/* If message.meta?.streaming is true, we can show a subtle "streaming" indicator style (optional) */}
                     {message.meta?.streaming ? (
                       <span className="opacity-90">{message.content}<span className="blinking-cursor">▍</span></span>
