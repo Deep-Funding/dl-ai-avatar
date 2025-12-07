@@ -161,6 +161,13 @@ const ChatInterface = ({
 
   const [showScrollDown, setShowScrollDown] = useState(false);
 
+  const scrollToBottom = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  };
+
+
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -352,17 +359,20 @@ const ChatInterface = ({
             the official DeepFunding team.
           </p>
 
-          {showScrollDown && (
-            <Button
-              className="absolute bottom-20 right-4 rounded-full p-2 shadow-lg bg-primary text-primary-foreground"
-              onClick={() => {
-                const el = scrollRef.current;
-                if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-              }}
+          { showScrollDown && (
+            <button
+              onClick={scrollToBottom}
+              className="
+      absolute left-1/2 transform -translate-x-1/2 
+      bottom-20 z-50 flex items-center justify-center
+      w-10 h-10 rounded-full shadow-lg border border-white/20
+      bg-white/20 backdrop-blur-md hover:bg-white/30 transition
+    "
             >
-              <ArrowDown className="h-5 w-5" />
-            </Button>
+              <ArrowDown className="h-5 w-5 text-white" />
+            </button>
           )}
+
 
         </CardContent>
 
