@@ -34,3 +34,19 @@
     color: hsl(var(--foreground));
   }
 }
+
+@keyframes chatgptAppear {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.animate-chatgptAppear {
+  animation: chatgptAppear 0.22s ease-out forwards;
+}
+

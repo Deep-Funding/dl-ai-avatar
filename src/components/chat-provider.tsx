@@ -162,10 +162,32 @@ const ChatInterface = ({
   const [showScrollDown, setShowScrollDown] = useState(false);
 
   const scrollToBottom = () => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    if (!scrollRef.current) return;
+
+    scrollRef.current.scrollTo({
+      top: scrollRef.current.scrollHeight,
+      behavior: "smooth",
+    });
   };
+
+
+
+  const handleScroll = () => {
+    if (!scrollRef.current) return;
+
+    const el = scrollRef.current;
+
+    const scrollBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+
+    // ChatGPT rule #1 — hide if at bottom
+    const atBottom = scrollBottom < 50;
+
+    // ChatGPT rule #2 — show only after scrolling up > 1 viewport height
+    const pastThreshold = el.scrollTop < el.scrollHeight - el.clientHeight * 1.2;
+
+    setShowScrollDown(!atBottom && pastThreshold);
+  };
+
 
 
 
@@ -225,6 +247,7 @@ const ChatInterface = ({
 
         <CardContent
           ref={scrollRef}
+          onScroll={handleScroll}
           className="flex-grow overflow-y-auto p-4 space-y-4 relative"
         >
           {/* {messages.length === 0 && (
@@ -359,20 +382,30 @@ const ChatInterface = ({
             the official DeepFunding team.
           </p>
 
-          { showScrollDown && (
+          {showScrollDown && (
             <button
               onClick={scrollToBottom}
-              className="
-      absolute left-1/2 transform -translate-x-1/2 
-      bottom-20 z-50 flex items-center justify-center
-      w-10 h-10 rounded-full shadow-lg border border-white/20
-      bg-white/20 backdrop-blur-md hover:bg-white/30 transition
-    "
+              className={`
+      fixed 
+      bottom-24 left-1/2 -translate-x-1/2
+      z-[9999]
+      h-10 w-10 flex items-center justify-center
+      rounded-full
+
+      bg-[#2f2f2f]/90 backdrop-blur-md
+      border border-white/10
+      shadow-[0_0_12px_rgba(0,0,0,0.45)]
+
+      transition-all duration-200
+      hover:bg-[#3b3b3b]/90 active:scale-95
+
+      animate-chatgptAppear
+      ${isLoading ? 'opacity-50 pointer-events-none' : ''}
+    `}
             >
               <ArrowDown className="h-5 w-5 text-white" />
             </button>
           )}
-
 
         </CardContent>
 
@@ -422,6 +455,7 @@ export function ChatProvider() {
     setExpandedContextIds([]);
     localStorage.setItem("deepfunding-chat", JSON.stringify([]));
   };
+
 
 
 
