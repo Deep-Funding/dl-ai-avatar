@@ -59,7 +59,7 @@ html {
 .blinking-cursor {
   display: inline-block;
   margin-left: 4px;
-  animation: blink 0.5s ease-in-out infinite; /* adjust speed here */
+  animation: blink 0.75s ease-in-out infinite; /* adjust speed here */
 }
 
 @keyframes blink {

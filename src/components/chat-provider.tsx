@@ -131,7 +131,6 @@ const ChatInterface = ({
   scrollRef,
   onQuickInsert,
   onNewChat,
-  showScrollDown,
   onScrollToBottom,
 }: {
   onClose: () => void;
@@ -149,6 +148,50 @@ const ChatInterface = ({
   onScrollToBottom: () => void;
 }) => {
   const bubbleWidthClass = isFullScreen ? 'max-w-[80%]' : 'max-w-xs md:max-w-md lg:max-w-lg';
+
+  const [showScrollDown, setShowScrollDown] = useState(false);
+
+  const scrollToBottom = () => {
+    if (!scrollRef.current) return;
+
+    scrollRef.current.scrollTo({
+      top: scrollRef.current.scrollHeight,
+      behavior: "smooth",
+    });
+  };
+
+
+  const handleScroll = () => {
+    if (!scrollRef.current) return;
+
+    const el = scrollRef.current;
+
+    const scrollBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+
+    // ChatGPT rule #1 — hide if at bottom
+    const atBottom = scrollBottom < 50;
+
+    // ChatGPT rule #2 — show only after scrolling up > 1 viewport height
+    const pastThreshold = el.scrollTop < el.scrollHeight - el.clientHeight * 1.2;
+
+    setShowScrollDown(!atBottom && pastThreshold);
+  };
+
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const onScroll = () => {
+      const isBottom =
+        el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+      setShowScrollDown(!isBottom);
+    };
+
+    el.addEventListener("scroll", onScroll);
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [scrollRef]);
+
 
   return (
     <div className={`fixed transition-all duration-300 ${isFullScreen ? 'inset-0' : 'bottom-0 right-0 w-full max-w-md h-[70vh]'} m-0 z-50`}>
@@ -179,7 +222,7 @@ const ChatInterface = ({
           </div>
         </CardHeader>
 
-        <CardContent ref={scrollRef} className="flex-grow overflow-y-auto p-4 space-y-4 relative">
+        <CardContent ref={scrollRef} onScroll={handleScroll} className="flex-grow overflow-y-auto p-4 space-y-4 relative">
           {messages.length === 0 && (
             <div className="text-center text-muted-foreground space-y-3">
               <p>Ask a question to get started, for example:</p>
@@ -224,6 +267,31 @@ const ChatInterface = ({
               </div>
             );
           })}
+
+          {showScrollDown && (
+            <button
+              onClick={scrollToBottom}
+              className={`
+                fixed 
+                bottom-24 left-1/2 -translate-x-1/2
+                z-[9999]
+                h-10 w-10 flex items-center justify-center
+                rounded-full
+          
+                bg-[#2f2f2f]/90 backdrop-blur-md
+                border border-white/10
+                shadow-[0_0_12px_rgba(0,0,0,0.45)]
+          
+                transition-all duration-200
+                hover:bg-[#3b3b3b]/90 active:scale-95
+          
+                animate-chatgptAppear
+                ${isLoading ? 'opacity-50 pointer-events-none' : ''}
+              `}
+            >
+              <ArrowDown className="h-5 w-5 text-white" />
+            </button>
+          )}
         </CardContent>
 
         <p className="text-xs text-muted-foreground text-center leading-snug px-4">
