@@ -218,7 +218,7 @@ const ChatInterface = ({
         <CardHeader className="flex flex-row items-center justify-between p-4">
           <div className="flex items-center space-x-4">
             <Avatar>
-              <AvatarImage src="/logo.png" alt="DeepFunding AI" />
+              <AvatarImage src="/logo.png" alt="Deep AI" />
               <AvatarFallback>DF</AvatarFallback>
             </Avatar>
             <div>
@@ -229,18 +229,45 @@ const ChatInterface = ({
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            <Button variant="ghost" size="icon" onClick={onToggleFullScreen}>
+            <Button variant="ghost" size="icon" className="
+    h-8 w-8
+    rounded-full
+    bg-white/10
+    backdrop-blur-md
+    border border-white/20
+    shadow-sm
+    hover:bg-white/20 hover:border-white/30
+    transition
+  " onClick={onToggleFullScreen}>
               {isFullScreen ? (
-                <Minimize className="h-4 w-4" />
+                <Minimize className="h-4 w-4 text-white" />
               ) : (
-                <Maximize className="h-4 w-4" />
+                <Maximize className="h-4 w-4 text-white" />
               )}
             </Button>
-            <Button variant="ghost" size="icon" onClick={onNewChat}>
-              <Plus className="h-4 w-4" />
+            <Button variant="ghost" size="icon" className="
+    h-8 w-8
+    rounded-full
+    bg-primary/20
+    backdrop-blur-md
+    border border-primary/30
+    shadow-sm
+    hover:bg-primary/30 hover:border-primary/40
+    transition
+  " onClick={onNewChat}>
+              <Plus className="h-4 w-4 text-primary-foreground" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={onClose}>
-              <X className="h-4 w-4" />
+            <Button variant="ghost" size="icon" className="
+    h-8 w-8
+    rounded-full
+    bg-red-500/20
+    backdrop-blur-md
+    border border-red-400/30
+    shadow-sm
+    hover:bg-red-500/30 hover:border-red-400/40
+    transition
+  " onClick={onClose}>
+              <X className="h-4 w-4 text-red-200" />
             </Button>
           </div>
         </CardHeader>
