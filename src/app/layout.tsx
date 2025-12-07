@@ -7,17 +7,17 @@ import localFont from "next/font/local";
 const generalSans = localFont({
   src: [
     {
-      path: "/public/fonts/GeneralSans-Regular.woff2",
+      path: "fonts/GeneralSans-Regular.woff2",
       weight: "400",
       style: "normal",
     },
     {
-      path: "/public/fonts/GeneralSans-Medium.woff2",
+      path: "fonts/GeneralSans-Medium.woff2",
       weight: "500",
       style: "normal",
     },
     {
-      path: "/public/fonts/GeneralSans-Semibold.woff2",
+      path: "fonts/GeneralSans-Semibold.woff2",
       weight: "600",
       style: "normal",
     },
