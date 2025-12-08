@@ -1,6 +1,6 @@
 'use server';
 
-import { getPool } from '@/lib/db'; // Ensure you created this in db.ts
+import { getPool } from '@/lib/db'; // your postgres pool factory
 import { GoogleAuth } from 'google-auth-library';
 
 const PROJECT_ID = 'labs-463322';
@@ -25,7 +25,7 @@ export type RetrievedContext = {
   }>;
 };
 
-// ---------------- AUTH ----------------
+// ---------------- AUTH (Vertex AI token) ----------------
 let authClient: any = null;
 
 async function getAuthToken(): Promise<string> {
@@ -67,104 +67,177 @@ async function embedQuery(query: string): Promise<number[]> {
   });
 
   if (!resp.ok) {
-    throw new Error(`Embedding failed: ${await resp.text()}`);
+    const b = await resp.text().catch(() => '');
+    throw new Error(`Embedding failed: ${resp.status} ${b}`);
   }
 
   const json = await resp.json();
-  return json.predictions[0].embeddings.values;
-}
-
-// ---------------- SIMILARITY ----------------
-function cosineSimilarity(a: number[], b: number[]) {
-  let dot = 0, na = 0, nb = 0;
-
-  for (let i = 0; i < a.length; i++) {
-    dot += a[i] * b[i];
-    na += a[i] ** 2;
-    nb += b[i] ** 2;
+  const values = json?.predictions?.[0]?.embeddings?.values;
+  if (!Array.isArray(values)) {
+    throw new Error('Embedding response missing embeddings.values');
   }
 
-  if (!na || !nb) return 0;
-  return dot / (Math.sqrt(na) * Math.sqrt(nb));
+  return values;
 }
 
-function isAllowedSource(url: string) {
+// ---------------- UTILS ----------------
+function isAllowedHostname(url: string) {
   try {
-    return ALLOWED_HOSTNAMES.includes(new URL(url).hostname);
+    const host = new URL(url).hostname;
+    return ALLOWED_HOSTNAMES.includes(host);
   } catch {
     return false;
   }
 }
 
-// ---------------- MAIN: Postgres Context Retrieval ----------------
-export async function getContextForQuery(query: string, options: { topK?: number; minScore?: number } = {}) {
+const SOURCE_WEIGHTS: Record<string, number> = {
+  'deepfunding.ai': 1.0,
+  'deep-communities.ai': 0.9,
+  'df-manual.gitbook.io': 1.05,
+};
+
+// ---------------- MAIN: Postgres RAG retriever ----------------
+export async function getContextForQuery(
+  query: string,
+  options: { topK?: number; minScore?: number } = {}
+): Promise<RetrievedContext | null> {
   const topK = options.topK ?? 8;
+  const minScore = typeof options.minScore === 'number' ? options.minScore : 0.4;
 
   const pool = getPool();
-  const embedding = await embedQuery(query);
-  const embeddingVector = embedding.join(',');
 
-  const { rows } = await pool.query(
-    `
-    SELECT 
+  // 1) embed query
+  const queryEmbedding = await embedQuery(query);
+
+  // pgvector expects a vector literal like: '[0.1,0.2,...]'
+  const embeddingLiteral = `[${queryEmbedding.join(',')}]`;
+
+  // fetch a superset of candidates (we will rerank & filter in-app)
+  // we fetch more than topK to allow post-filtering by hostname and weighting
+  const fetchCount = Math.max(topK * 4, 50);
+
+  const sql = `
+    SELECT
+      id,
       url,
       text,
       summary,
       timestamp,
-      1 - (embedding <=> $1::vector) +
-      (EXTRACT(EPOCH FROM (NOW() - timestamp)) * -0.00000002)
-        AS base_score
+      embedding <=> $1::vector AS distance  -- lower is better
     FROM vector_chunks
     ORDER BY embedding <=> $1::vector
     LIMIT $2;
-    `,
-    [embeddingVector, topK * 3] // fetch more for reranking
-  );
+  `;
 
-  const SOURCE_WEIGHTS: Record<string, number> = {
-    'deepfunding.ai': 1.0,
-    'deep-communities.ai': 0.85,
-    'df-manual.gitbook.io': 1.15,
-  };
+  let rows: any[] = [];
+  try {
+    const { rows: raw } = await pool.query(sql, [embeddingLiteral, fetchCount]);
+    rows = raw ?? [];
+  } catch (err) {
+    console.error('[RAG] Postgres query failed', (err as any)?.message ?? err);
+    throw err;
+  }
 
-  // rerank + dedupe
-  const reranked = rows.map((row) => {
-    const host = new URL(row.url).hostname;
-    const weight = SOURCE_WEIGHTS[host] ?? 1.0;
+  if (!rows.length) {
+    console.log('[RAG] No candidate rows returned from Postgres.');
+    return null;
+  }
 
-    let score = row.base_score * weight;
+  // 2) rerank & score: convert distance -> similarity score (0..1)
+  //    We'll use score = 1 - distance (safe if distances are in [0,2] for pgvector cosine)
+  const candidates = rows
+    .map((r) => {
+      const url = String(r.url ?? '');
+      const text = String(r.text ?? '');
+      const summary = r.summary ?? null;
+      const ts = r.timestamp ? new Date(r.timestamp).toISOString() : new Date().toISOString();
+      const distance = typeof r.distance === 'number' ? r.distance : Number(r.distance ?? 1);
 
-    // keyword bonus
-    const lowerQ = query.toLowerCase();
-    if (row.text.toLowerCase().includes(lowerQ)) score += 0.05;
-    if (row.summary?.toLowerCase().includes(lowerQ)) score += 0.03;
+      // convert to similarity (clamp)
+      let sim = 1 - distance;
+      if (!Number.isFinite(sim)) sim = 0;
 
-    return { ...row, score };
-  });
+      // apply source weight
+      let host = '[unknown]';
+      try {
+        host = new URL(url).hostname;
+      } catch {
+        /* ignore */
+      }
+      const weight = SOURCE_WEIGHTS[host] ?? 1.0;
+      const weighted = sim * weight;
 
-  const sorted = reranked
-    .sort((a, b) => b.score - a.score)
+      // small heuristics: give a tiny boost if query tokens found in text/summary
+      const ql = query.toLowerCase();
+      let bonus = 0;
+      if (text.toLowerCase().includes(ql)) bonus += 0.03;
+      if (summary && summary.toLowerCase().includes(ql)) bonus += 0.02;
+
+      const score = Math.min(1, Math.max(-1, weighted + bonus));
+
+      return {
+        url,
+        text,
+        summary,
+        timestamp: ts,
+        distance,
+        score,
+        host,
+      };
+    })
+    // keep only allowed hosts (post-filter)
+    .filter((c) => ALLOWED_HOSTNAMES.includes(c.host))
+    // remove NaN or invalid score items
+    .filter((c) => Number.isFinite(c.score));
+
+  if (!candidates.length) {
+    console.log('[RAG] No candidates after host filtering.');
+    return null;
+  }
+
+  // 3) final sort + minScore filter + de-dup by url
+  const deduped: Record<string, any> = {};
+  for (const c of candidates) {
+    if (!deduped[c.url] || deduped[c.url].score < c.score) {
+      deduped[c.url] = c;
+    }
+  }
+  const finalList = Object.values(deduped)
+    .sort((a: any, b: any) => b.score - a.score)
+    .filter((c: any) => c.score >= minScore)
     .slice(0, topK);
 
-  const combinedContext = sorted
-    .map(
-      (c, idx) =>
-        `[DOC ${idx + 1}] ${c.url}
-Score: ${c.score.toFixed(3)}
-Time: ${c.timestamp}
+  if (!finalList.length) {
+    console.log(`[RAG] No chunks above minScore (${minScore}).`);
+    return null;
+  }
 
-${c.text}`
+  // 4) build combinedContext (string) and return structured chunks
+  const combinedContext = finalList
+    .map(
+      (c: any, idx: number) =>
+        `[DOC ${idx + 1}] URL: ${c.url}\nScore: ${c.score.toFixed(3)}\nTimestamp: ${c.timestamp}\nContent:\n${c.text}`
     )
     .join('\n\n-----\n\n');
 
+  const chunks = finalList.map((c: any) => ({
+    url: c.url,
+    text: c.text,
+    summary: c.summary ?? null,
+    score: c.score,
+    timestamp: c.timestamp,
+  }));
+
+  console.log(`[RAG] Returning ${chunks.length} chunks (topK=${topK}, minScore=${minScore}).`);
+
   return {
     combinedContext,
-    chunks: sorted,
+    chunks,
   };
 }
 
-
+// backwards compat
 export async function retrieveContext(query: string): Promise<string> {
-  const ctx = await getContextForQuery(query);
-  return ctx?.combinedContext ?? '';
+  const r = await getContextForQuery(query);
+  return r?.combinedContext ?? '';
 }
