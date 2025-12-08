@@ -82,8 +82,8 @@ export async function POST(req: NextRequest) {
     const sources =
       contextResult?.chunks.map((c) => ({
         url: c.url,
-        score: c.score,
-        timestamp: c.timestamp,
+        score: c.score ?? null,
+        timestamp: c.timestamp ?? null,
         summary: c.summary ?? null,
       })) ?? [];
 
