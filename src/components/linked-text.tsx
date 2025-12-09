@@ -82,7 +82,7 @@ export function LinkedText({ text }: LinkedTextProps) {
             href={href}
             target="_blank"
             rel="noreferrer"
-            className="underline underline-offset-2 text-blue-400 hover:text-blue-300"
+            className="text-white/90 hover:text-white underline underline-offset-2 decoration-white/20 hover:decoration-white"
           >
             {children}
           </a>
