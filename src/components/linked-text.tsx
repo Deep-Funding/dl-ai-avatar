@@ -8,7 +8,12 @@ type LinkedTextProps = {
   text: string;
 };
 
+// Regex to detect plaintext URLs
+const URL_REGEX = /(https?:\/\/[^\s)]+)/g;
+
 export function LinkedText({ text }: LinkedTextProps) {
+  // Automatically wrap raw URLs in markdown-style links
+  const processed = text.replace(URL_REGEX, (url) => `[${url}](${url})`);
   return (
     <ReactMarkdown
       components={{
@@ -104,7 +109,7 @@ export function LinkedText({ text }: LinkedTextProps) {
         },
       }}
     >
-      {text}
+      {processed}
     </ReactMarkdown>
   );
 }
