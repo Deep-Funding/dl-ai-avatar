@@ -354,6 +354,8 @@ export function ChatProvider() {
   // streaming helpers
   const streamingRef = useRef<{ id: string; interval?: number | null } | null>(null);
 
+  const isInIframe = typeof window !== "undefined" && window.self !== window.top;
+
   // useEffect(() => {
   //   if (isEmbedPage) setIsOpen(true);
   // }, [isEmbedPage]);
@@ -627,7 +629,7 @@ export function ChatProvider() {
   <>
     {isEmbedPage ? (
       <ChatInterface
-        embedded
+        embedded={isInIframe}
         onClose={() => {}}
         isFullScreen={false}
         onToggleFullScreen={() => {}}
