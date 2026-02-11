@@ -622,35 +622,86 @@ export function ChatProvider() {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
   };
 
+
   return (
-    <>
-      {isOpen ? (
-        <ChatInterface
-          embedded={isEmbedPage}
-          onClose={() => setIsOpen(false)}
-          isFullScreen={isFullScreen}
-          onToggleFullScreen={() => setIsFullScreen(!isFullScreen)}
-          messages={messages}
-          input={input}
-          onInputChange={(e) => setInput(e.target.value)}
-          onSend={handleSend}
-          isLoading={isLoading}
-          scrollRef={scrollRef}
-          onQuickInsert={handleQuickInsert}
-          onNewChat={handleNewChat}
-          showScrollDown={showScrollDown}
-          onScrollToBottom={onScrollToBottom}
-        />
-      ) : (
-        !isEmbedPage && (
-          <Button className="fixed bottom-8 right-8 rounded-full w-16 h-16 bg-primary hover:bg-primary/90 shadow-lg" onClick={() => setIsOpen(true)} style={{ boxShadow: '0 0 15px hsl(var(--primary)), 0 0 25px hsl(var(--primary))' }}>
-            <Avatar>
-              <AvatarImage src="/logo.png" alt="DeepFunding AI" />
-              <AvatarFallback>AI</AvatarFallback>
-            </Avatar>
-          </Button>
-        )
-      )}
-    </>
-  );
+  <>
+    {isEmbedPage ? (
+      <ChatInterface
+        embedded
+        onClose={() => {}}
+        isFullScreen={false}
+        onToggleFullScreen={() => {}}
+        messages={messages}
+        input={input}
+        onInputChange={(e) => setInput(e.target.value)}
+        onSend={handleSend}
+        isLoading={isLoading}
+        scrollRef={scrollRef}
+        onQuickInsert={handleQuickInsert}
+        onNewChat={handleNewChat}
+        showScrollDown={showScrollDown}
+        onScrollToBottom={onScrollToBottom}
+      />
+    ) : isOpen ? (
+      <ChatInterface
+        onClose={() => setIsOpen(false)}
+        isFullScreen={isFullScreen}
+        onToggleFullScreen={() => setIsFullScreen(!isFullScreen)}
+        messages={messages}
+        input={input}
+        onInputChange={(e) => setInput(e.target.value)}
+        onSend={handleSend}
+        isLoading={isLoading}
+        scrollRef={scrollRef}
+        onQuickInsert={handleQuickInsert}
+        onNewChat={handleNewChat}
+        showScrollDown={showScrollDown}
+        onScrollToBottom={onScrollToBottom}
+      />
+    ) : (
+      <Button
+        className="fixed bottom-8 right-8 rounded-full w-16 h-16 bg-primary hover:bg-primary/90 shadow-lg"
+        onClick={() => setIsOpen(true)}
+      >
+        <Avatar>
+          <AvatarImage src="/logo.png" alt="DeepFunding AI" />
+          <AvatarFallback>AI</AvatarFallback>
+        </Avatar>
+      </Button>
+    )}
+  </>
+);
+
+
+  // return (
+  //   <>
+  //     {isOpen ? (
+  //       <ChatInterface
+  //         embedded={isEmbedPage}
+  //         onClose={() => setIsOpen(false)}
+  //         isFullScreen={isFullScreen}
+  //         onToggleFullScreen={() => setIsFullScreen(!isFullScreen)}
+  //         messages={messages}
+  //         input={input}
+  //         onInputChange={(e) => setInput(e.target.value)}
+  //         onSend={handleSend}
+  //         isLoading={isLoading}
+  //         scrollRef={scrollRef}
+  //         onQuickInsert={handleQuickInsert}
+  //         onNewChat={handleNewChat}
+  //         showScrollDown={showScrollDown}
+  //         onScrollToBottom={onScrollToBottom}
+  //       />
+  //     ) : (
+  //       !isEmbedPage && (
+  //         <Button className="fixed bottom-8 right-8 rounded-full w-16 h-16 bg-primary hover:bg-primary/90 shadow-lg" onClick={() => setIsOpen(true)} style={{ boxShadow: '0 0 15px hsl(var(--primary)), 0 0 25px hsl(var(--primary))' }}>
+  //           <Avatar>
+  //             <AvatarImage src="/logo.png" alt="DeepFunding AI" />
+  //             <AvatarFallback>AI</AvatarFallback>
+  //           </Avatar>
+  //         </Button>
+  //       )
+  //     )}
+  //   </>
+  // );
 }
