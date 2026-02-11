@@ -208,9 +208,9 @@ const ChatInterface = ({
 
   return (
     /*<div className={`fixed transition-all duration-300 ${isFullScreen ? 'inset-0' : 'bottom-0 right-0 w-full max-w-md h-[70vh]'} m-0 z-50`}>*/
-    <div className={`transition-all duration-300 ${embedded ? 'relative w-full h-full' : `fixed ${isFullScreen ? 'inset-0' : 'bottom-0 right-0 w-full max-w-md h-[70vh]'} z-50`} `}>
+    <div className={ embedded ? "w-full h-full" : `fixed transition-all duration-300 ${isFullScreen ? 'inset-0' : 'bottom-0 right-0 w-full max-w-md h-[70vh]'} z-50`} }>
       {/* overlay when fullscreen for readability - keep this if you already applied in your main file */}
-      {isFullScreen && <div className="absolute inset-0 bg-black/40 backdrop-blur-sm pointer-events-none z-0" />}
+      {!embedded && isFullScreen && (<div className="absolute inset-0 bg-black/40 backdrop-blur-sm pointer-events-none z-0" />)}
       <Card className={`relative z-10 flex flex-col h-full bg-card/80 backdrop-blur-sm border-border/50 ${isFullScreen ? 'rounded-none' : 'rounded-t-lg'}`}>
         <CardHeader className="flex flex-row items-center justify-between p-4">
           <div className="flex items-center space-x-4">
@@ -224,9 +224,9 @@ const ChatInterface = ({
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-sm hover:bg-white/20 hover:border-white/30 transition" onClick={onToggleFullScreen}>
+            {!embedded && (<Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-sm hover:bg-white/20 hover:border-white/30 transition" onClick={onToggleFullScreen}>
               {isFullScreen ? <Minimize className="h-4 w-4 text-white" /> : <Maximize className="h-4 w-4 text-white" />}
-            </Button>
+            </Button>)}
             <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-primary/20 backdrop-blur-md border border-primary/30 shadow-sm hover:bg-primary/30 hover:border-primary/40 transition" onClick={onNewChat}>
               <Plus className="h-4 w-4 text-primary-foreground" />
             </Button>
