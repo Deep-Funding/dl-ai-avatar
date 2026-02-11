@@ -2,7 +2,7 @@
   if (window.DeepAIWidgetLoaded) return;
   window.DeepAIWidgetLoaded = true;
 
-  const WIDGET_URL = "https://your-domain.com/embed";
+  const WIDGET_URL = "https://ai-avatar-updated-137748040614.us-central1.run.app/embed";
 
   // Create iframe
   const iframe = document.createElement("iframe");
