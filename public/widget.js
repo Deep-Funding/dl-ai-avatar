@@ -11,7 +11,7 @@
   const HEIGHT = config.height || 600;
 
   const WIDGET_URL =
-    (config.baseUrl || "https://ai-avatar-updated-137748040614.us-central1.run.app/") + "/embed";
+    (config.baseUrl || "https://ai-avatar-updated-137748040614.us-central1.run.app") + "/embed";
 
   // -------------------------
   // Create iframe
