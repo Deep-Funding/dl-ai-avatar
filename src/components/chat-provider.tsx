@@ -343,9 +343,9 @@ export function ChatProvider() {
   // streaming helpers
   const streamingRef = useRef<{ id: string; interval?: number | null } | null>(null);
 
-  useEffect(() => {
-    if (isEmbedPage) setIsOpen(true);
-  }, [isEmbedPage]);
+  // useEffect(() => {
+  //   if (isEmbedPage) setIsOpen(true);
+  // }, [isEmbedPage]);
 
   // restore from storage
   useEffect(() => {
