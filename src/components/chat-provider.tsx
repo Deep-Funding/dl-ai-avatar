@@ -151,6 +151,17 @@ const ChatInterface = ({
 }) => {
   const bubbleWidthClass = isFullScreen ? 'max-w-[80%]' : 'max-w-xs md:max-w-md lg:max-w-lg';
 
+  const handleClose = () => {
+  if (embedded) {
+    window.parent.postMessage(
+      { type: "DEEPAI_WIDGET_CLOSE" },
+      "*"
+    );
+  } else {
+    onClose();
+  }
+};
+
   const [showScrollDown, setShowScrollDown] = useState(false);
 
   const scrollToBottom = () => {
@@ -219,7 +230,7 @@ const ChatInterface = ({
             <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-primary/20 backdrop-blur-md border border-primary/30 shadow-sm hover:bg-primary/30 hover:border-primary/40 transition" onClick={onNewChat}>
               <Plus className="h-4 w-4 text-primary-foreground" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-red-500/20 backdrop-blur-md border border-red-400/30 shadow-sm hover:bg-red-500/30 hover:border-red-400/40 transition" onClick={onClose}>
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-red-500/20 backdrop-blur-md border border-red-400/30 shadow-sm hover:bg-red-500/30 hover:border-red-400/40 transition" onClick={handleClose}>
               <X className="h-4 w-4 text-red-200" />
             </Button>
           </div>
