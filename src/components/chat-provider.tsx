@@ -132,6 +132,7 @@ const ChatInterface = ({
   onQuickInsert,
   onNewChat,
   onScrollToBottom,
+  embedded,
 }: {
   onClose: () => void;
   isFullScreen: boolean;
@@ -146,6 +147,7 @@ const ChatInterface = ({
   onNewChat: () => void;
   showScrollDown: boolean;
   onScrollToBottom: () => void;
+  embedded?: boolean;
 }) => {
   const bubbleWidthClass = isFullScreen ? 'max-w-[80%]' : 'max-w-xs md:max-w-md lg:max-w-lg';
 
@@ -194,7 +196,8 @@ const ChatInterface = ({
 
 
   return (
-    <div className={`fixed transition-all duration-300 ${isFullScreen ? 'inset-0' : 'bottom-0 right-0 w-full max-w-md h-[70vh]'} m-0 z-50`}>
+    /*<div className={`fixed transition-all duration-300 ${isFullScreen ? 'inset-0' : 'bottom-0 right-0 w-full max-w-md h-[70vh]'} m-0 z-50`}>*/
+    <div className={`transition-all duration-300 ${embedded ? 'relative w-full h-full' : `fixed ${isFullScreen ? 'inset-0' : 'bottom-0 right-0 w-full max-w-md h-[70vh]'} z-50`} `}>
       {/* overlay when fullscreen for readability - keep this if you already applied in your main file */}
       {isFullScreen && <div className="absolute inset-0 bg-black/40 backdrop-blur-sm pointer-events-none z-0" />}
       <Card className={`relative z-10 flex flex-col h-full bg-card/80 backdrop-blur-sm border-border/50 ${isFullScreen ? 'rounded-none' : 'rounded-t-lg'}`}>
@@ -612,6 +615,7 @@ export function ChatProvider() {
     <>
       {isOpen ? (
         <ChatInterface
+          embedded={isEmbedPage}
           onClose={() => setIsOpen(false)}
           isFullScreen={isFullScreen}
           onToggleFullScreen={() => setIsFullScreen(!isFullScreen)}
