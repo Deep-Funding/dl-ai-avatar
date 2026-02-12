@@ -208,10 +208,11 @@ const ChatInterface = ({
 
   return (
     /*<div className={`fixed transition-all duration-300 ${isFullScreen ? 'inset-0' : 'bottom-0 right-0 w-full max-w-md h-[70vh]'} m-0 z-50`}>*/
-    <div className={ embedded ? "w-full h-full" : `fixed transition-all duration-300 ${isFullScreen ? 'inset-0' : 'bottom-0 right-0 w-full max-w-md h-[70vh]'} z-50`}>
+    <div className={ embedded ? "w-full h-full" : `fixed transition-all duration-300 ${isFullScreen ? "inset-0" : "bottom-0 right-0 w-full max-w-md h-[70vh]"} z-50`}>
       {/* overlay when fullscreen for readability - keep this if you already applied in your main file */}
       {!embedded && isFullScreen && (<div className="absolute inset-0 bg-black/40 backdrop-blur-sm pointer-events-none z-0" />)}
-      <Card className={`relative z-10 flex flex-col h-full bg-card/80 backdrop-blur-sm border-border/50 ${isFullScreen ? 'rounded-none' : 'rounded-t-lg'}`}>
+      {/* <Card className={`relative z-10 flex flex-col h-full bg-card/80 backdrop-blur-sm border-border/50 ${isFullScreen ? 'rounded-none' : 'rounded-t-lg'}`}> */}
+      <Card className={`relative flex flex-col ${embedded ? "w-full h-full rounded-none" : "h-full rounded-2xl"} bg-card/80 backdrop-blur-sm border-border/50`}>
         <CardHeader className="flex flex-row items-center justify-between p-4">
           <div className="flex items-center space-x-4">
             <Avatar>
